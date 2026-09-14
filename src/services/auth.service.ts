@@ -15,6 +15,8 @@ const mapBackendUser = (bUser: any, phoneFallback?: string): User => {
     phone: bUser.phone || phoneFallback || '',
     email: bUser.email || '',
     district: bUser.district || 'Ranchi',
+    pincode: bUser.pincode || '834001',
+    village_or_city: bUser.village_or_city || '',
     role: bUser.role || 'citizen',
     createdAt: bUser.created_at || bUser.createdAt || new Date().toISOString(),
   };
@@ -111,10 +113,22 @@ export const authService = {
    */
   verifyOTP: async (
     phone: string,
-    otp: string
+    otp: string,
+    registrationData?: {
+      full_name: string;
+      phone: string;
+      email?: string;
+      password?: string;
+      district?: string;
+      pincode?: string;
+      village_or_city?: string;
+    }
   ): Promise<{ success: boolean; user: User; token: string }> => {
     if (otp !== '123456' && otp.length !== 6) {
       throw new Error('गलत OTP — फिर से कोशिश करो');
+    }
+    if (registrationData) {
+      return authService.register(registrationData);
     }
     return authService.loginWithPassword(phone, 'SecurePassword123!');
   },

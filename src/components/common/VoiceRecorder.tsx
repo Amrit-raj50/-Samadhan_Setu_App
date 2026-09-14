@@ -22,6 +22,8 @@ import { Mic, Square, Play, Pause, Trash2, Check } from 'lucide-react-native';
 import { colors } from '../../theme/colors';
 import { fontSize } from '../../theme/typography';
 import { spacing, borderRadius } from '../../theme/spacing';
+import { useAppStore } from '../../store/appStore';
+import { resolveVoiceLanguage, transcribeAudio } from '../../services/voice.service';
 
 // Lazy load expo-av to prevent crash when native module is missing (Expo Go)
 let AudioModule: any = null;
@@ -34,15 +36,26 @@ try {
   isNativeAvailable = false;
 }
 
+// Lazy load expo-file-system safely
+let FileSystemModule: any = null;
+try {
+  FileSystemModule = require('expo-file-system');
+} catch {
+  FileSystemModule = null;
+}
+
 interface VoiceRecorderProps {
   onRecordingComplete: (uri: string | null, durationSeconds?: number) => void;
+  onTranscript?: (text: string) => void;
   initialUri?: string | null;
 }
 
 export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
   onRecordingComplete,
+  onTranscript,
   initialUri = null,
 }) => {
+  const language = useAppStore((s) => s.language);
   const [recording, setRecording] = useState<any>(null);
   const [sound, setSound] = useState<any>(null);
   const [recordingUri, setRecordingUri] = useState<string | null>(initialUri);
@@ -129,6 +142,24 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     }, 1000);
   };
 
+  const handleASR = async (fileUri: string | null) => {
+    if (!onTranscript || !fileUri) return;
+    try {
+      if (FileSystemModule && FileSystemModule.readAsStringAsync && FileSystemModule.EncodingType) {
+        const base64 = await FileSystemModule.readAsStringAsync(fileUri, {
+          encoding: FileSystemModule.EncodingType.Base64,
+        });
+        const effectiveLang = resolveVoiceLanguage(language);
+        const transcriptText = await transcribeAudio(base64, effectiveLang);
+        if (transcriptText) {
+          onTranscript(transcriptText);
+        }
+      }
+    } catch (err) {
+      console.warn('[VoiceRecorder] Bhashini ASR failed, continuing without transcript:', err);
+    }
+  };
+
   const stopRecording = async () => {
     if (timerRef.current) clearInterval(timerRef.current);
     setIsRecording(false);
@@ -141,6 +172,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
         setRecording(null);
         setRecordingUri(uri);
         onRecordingComplete(uri, duration);
+        handleASR(uri);
         return;
       } catch (err) {
         console.error('Failed to stop recording:', err);
@@ -152,6 +184,7 @@ export const VoiceRecorder: React.FC<VoiceRecorderProps> = ({
     setRecording(null);
     setRecordingUri(fakeUri);
     onRecordingComplete(fakeUri, duration);
+    handleASR(fakeUri);
   };
 
   const playSound = async () => {

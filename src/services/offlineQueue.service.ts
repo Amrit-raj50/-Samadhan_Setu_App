@@ -4,6 +4,7 @@
  * RULE: Never show "fail" — always reassuring ("saved, sending when possible").
  */
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { problemService } from './problem.service';
 
 const QUEUE_KEY = '@samadhan_offline_queue';
 
@@ -109,9 +110,7 @@ export const offlineQueueService = {
     for (const item of pending) {
       try {
         await offlineQueueService.updateStatus(item.id, 'syncing');
-        // In production: await problemService.submitProblem(item.data);
-        // For mock: simulate success after delay
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        await problemService.submitProblem(item.data as any);
         await offlineQueueService.updateStatus(item.id, 'synced');
         synced++;
       } catch {

@@ -418,6 +418,11 @@ export default function SubmitScreen() {
           setVoiceUri(uri);
           setVoiceRecorded(!!uri);
         }}
+        onTranscript={(text) => {
+          if (text) {
+            setDescription((prev) => (prev ? `${prev}\n${text}` : text));
+          }
+        }}
       />
 
       {/* Optional text description */}

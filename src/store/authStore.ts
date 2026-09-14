@@ -12,6 +12,8 @@ export interface User {
   phone: string;
   email?: string;
   district?: string;
+  pincode?: string;
+  village_or_city?: string;
   location?: {
     latitude: number;
     longitude: number;

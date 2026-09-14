@@ -132,20 +132,18 @@ export default function RegisterScreen() {
   const handleVerifyOTP = async () => {
     try {
       setLoading(true);
-      const result = await authService.verifyOTP(phone, otp);
-      // Also update with registration data
-      const user = {
-        ...result.user,
+      const registrationData = {
         full_name: name,
-        email: email || undefined,
+        phone: phone,
+        email: email ? email.trim() : undefined,
+        password: password || undefined,
         district: selectedDistrict,
-        location: locationCoords || undefined,
+        pincode: '834001',
+        village_or_city: selectedDistrict || 'Ranchi',
       };
+      const result = await authService.verifyOTP(phone, otp, registrationData);
       login(result.user, result.token);
-      router.replace({
-        pathname: '/login',
-        params: { registeredPhone: phone, registeredEmail: email, justRegistered: 'true' },
-      });
+      router.replace('/(tabs)/dashboard');
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {
@@ -159,15 +157,14 @@ export default function RegisterScreen() {
       const result = await authService.register({
         full_name: name,
         phone,
-        email: email || undefined,
+        email: email ? email.trim() : undefined,
         password,
         district: selectedDistrict,
+        pincode: '834001',
+        village_or_city: selectedDistrict || 'Ranchi',
       });
       login(result.user, result.token);
-      router.replace({
-        pathname: '/login',
-        params: { registeredPhone: phone, registeredEmail: email, justRegistered: 'true' },
-      });
+      router.replace('/(tabs)/dashboard');
     } catch (e: any) {
       Alert.alert('Error', e.message);
     } finally {

@@ -1,96 +1,102 @@
-/**
- * Samadhan Setu — VoiceGuideButton Component
- * 🔊 floating button on every screen.
- * Reads screen-specific Hindi instructions aloud via expo-speech.
- */
-import React, { useCallback } from 'react';
-import { TouchableOpacity, StyleSheet, View } from 'react-native';
-import * as Speech from 'expo-speech';
+import { useState } from 'react';
+import { TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
+import { Volume2 } from 'lucide-react-native';
+import { resolveVoiceLanguage, isBhashiniSupported, synthesizeSpeech } from '../../services/voice.service';
 import { useAppStore } from '../../store/appStore';
+import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../theme/colors';
-import { touchTargets } from '../../theme/spacing';
-import { Volume2, VolumeX } from 'lucide-react-native';
+
+// Lazy load native modules to prevent crash in Expo Go / Web when native modules are unavailable
+let AudioModule: any = null;
+try {
+  AudioModule = require('expo-av').Audio;
+} catch {
+  AudioModule = null;
+}
+
+let SpeechModule: any = null;
+try {
+  SpeechModule = require('expo-speech');
+} catch {
+  SpeechModule = null;
+}
+
+let currentSound: any = null;
 
 interface VoiceGuideButtonProps {
   text: string;
-  lang?: string;
 }
 
-export const VoiceGuideButton: React.FC<VoiceGuideButtonProps> = ({
-  text,
-  lang,
-}) => {
-  const { isSpeaking, setSpeaking, language, isVoiceGuideEnabled } = useAppStore();
-
-  const handlePress = useCallback(async () => {
-    if (isSpeaking) {
-      Speech.stop();
-      setSpeaking(false);
-      return;
-    }
-
-    setSpeaking(true);
-    // Santhali (sat), Ho (ho), Mundari (mun) are not supported by device TTS engines.
-    // Fall back to Hindi (hi-IN) since tribal language speakers are bilingual.
-    const ttsLangMap: Record<string, string> = {
-      hi: 'hi-IN',
-      en: 'en-US',
-      sat: 'hi-IN',
-      ho: 'hi-IN',
-      mun: 'hi-IN',
-    };
-    const speechLang = lang || ttsLangMap[language] || 'hi-IN';
-
-    Speech.speak(text, {
-      language: speechLang,
-      rate: 0.85, // Slower for better comprehension
-      pitch: 1.0,
-      onDone: () => setSpeaking(false),
-      onStopped: () => setSpeaking(false),
-      onError: () => setSpeaking(false),
-    });
-  }, [text, lang, language, isSpeaking, setSpeaking]);
+export function VoiceGuideButton({ text }: VoiceGuideButtonProps) {
+  const language = useAppStore((s) => s.language);
+  const isVoiceGuideEnabled = useAppStore((s) => s.isVoiceGuideEnabled);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
+  const [loading, setLoading] = useState(false);
 
   if (!isVoiceGuideEnabled) return null;
 
+  const speakWithDevice = (lang: string) => {
+    if (SpeechModule && SpeechModule.speak) {
+      SpeechModule.speak(text, { language: lang === 'hi' ? 'hi-IN' : 'en-IN' });
+    }
+  };
+
+  const handlePress = async () => {
+    setLoading(true);
+    const effectiveLang = resolveVoiceLanguage(language);
+
+    // Skip Bhashini API call when user is not authenticated — avoids 401 noise
+    if (!isAuthenticated || !isBhashiniSupported(effectiveLang)) {
+      speakWithDevice(effectiveLang);
+      setLoading(false);
+      return;
+    }
+
+    try {
+      const audioBase64 = await synthesizeSpeech(text, effectiveLang);
+      await playBase64Audio(audioBase64);
+    } catch (err) {
+      console.warn('[VoiceGuideButton] Bhashini TTS failed, falling back to device voice:', err);
+      speakWithDevice(effectiveLang);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
-    <TouchableOpacity
-      onPress={handlePress}
-      style={[styles.button, isSpeaking && styles.speaking]}
-      hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-      accessibilityLabel="Voice guide"
-      accessibilityRole="button"
-    >
-      {isSpeaking ? (
-        <VolumeX size={24} color={colors.surface} />
+    <TouchableOpacity onPress={handlePress} style={styles.button} disabled={loading}>
+      {loading ? (
+        <ActivityIndicator size="small" color={colors.chuna} />
       ) : (
-        <Volume2 size={24} color={colors.surface} />
+        <Volume2 size={20} color={colors.chuna} />
       )}
     </TouchableOpacity>
   );
-};
+}
+
+async function playBase64Audio(base64: string) {
+  if (!AudioModule) {
+    throw new Error('Expo AV Audio module is not available in current environment');
+  }
+  if (currentSound) {
+    try {
+      await currentSound.unloadAsync();
+    } catch {}
+  }
+  const { sound } = await AudioModule.Sound.createAsync(
+    { uri: `data:audio/wav;base64,${base64}` },
+    { shouldPlay: true }
+  );
+  currentSound = sound;
+}
 
 const styles = StyleSheet.create({
   button: {
-    position: 'absolute',
-    top: 12,
-    right: 16,
-    zIndex: 100,
-    width: touchTargets.minimum,
-    height: touchTargets.minimum,
-    borderRadius: touchTargets.minimum / 2,
-    backgroundColor: colors.forestGreen, // Distinctly green
-    justifyContent: 'center',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: colors.forestGreen,
     alignItems: 'center',
-    shadowColor: colors.charcoal,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 5,
-    borderWidth: 2,
-    borderColor: colors.surface,
-  },
-  speaking: {
-    backgroundColor: colors.ochre,
+    justifyContent: 'center',
   },
 });

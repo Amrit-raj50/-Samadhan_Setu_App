@@ -248,12 +248,12 @@ export const problemService = {
   },
 
   /**
-   * Get stats (GET /api/problems/stats)
+   * Get stats (GET /api/problems/stats/dashboard)
    * Matches getStats in controllers/problem.controller.js
    */
   getStats: async () => {
     try {
-      const res = await api.get('/problems/stats');
+      const res = await api.get('/problems/stats/dashboard');
       if (res.data?.success && res.data?.data) {
         return {
           totalComplaints: res.data.data.total || 0,
@@ -266,7 +266,45 @@ export const problemService = {
   },
 
   getAnalytics: async (district?: string) => {
-    return { thisMonth: { total: 0, resolved: 0 }, byCategory: [] };
+    try {
+      const problems = await problemService.getPublicProblems({ district });
+      const now = new Date();
+      const currentMonth = now.getMonth();
+      const currentYear = now.getFullYear();
+
+      const thisMonthProblems = problems.filter((p) => {
+        if (!p.submittedAt) return true;
+        const d = new Date(p.submittedAt);
+        return d.getMonth() === currentMonth && d.getFullYear() === currentYear;
+      });
+
+      const total = thisMonthProblems.length > 0 ? thisMonthProblems.length : problems.length;
+      const resolved = (thisMonthProblems.length > 0 ? thisMonthProblems : problems).filter(
+        (p) => p.status === 'resolved'
+      ).length;
+
+      const categoriesMap = new Map<CategoryId, { count: number; resolved: number }>();
+      problems.forEach((p) => {
+        const cat = p.category || 'road';
+        const existing = categoriesMap.get(cat) || { count: 0, resolved: 0 };
+        existing.count += 1;
+        if (p.status === 'resolved') existing.resolved += 1;
+        categoriesMap.set(cat, existing);
+      });
+
+      const byCategory = Array.from(categoriesMap.entries()).map(([category, stats]) => ({
+        category,
+        count: stats.count,
+        resolved: stats.resolved,
+      }));
+
+      return {
+        thisMonth: { total, resolved },
+        byCategory,
+      };
+    } catch {
+      return { thisMonth: { total: 0, resolved: 0 }, byCategory: [] };
+    }
   },
 
   getCommunityCount: async (district: string): Promise<number> => {

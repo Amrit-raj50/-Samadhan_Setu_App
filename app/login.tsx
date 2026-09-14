@@ -192,9 +192,12 @@ export default function LoginScreen() {
 
           {/* Headline & Subtitle */}
           <View style={styles.titleSection}>
-            <Text style={styles.title}>
-              {isHindi ? 'लॉगिन करें' : 'Log In'}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text style={styles.title}>
+                {isHindi ? 'लॉगिन करें' : 'Log In'}
+              </Text>
+              <VoiceGuideButton text={t('login.voiceGuide') || 'समाधान सेतु में लॉगिन करें। अपना मोबाइल नंबर या ईमेल और पासवर्ड भरें।'} />
+            </View>
             <Text style={styles.subtitle}>
               {isHindi ? 'अगर आपका खाता नहीं है, तो ऊपर "1. नया रजिस्ट्रेशन" चुनें' : 'New users: choose "1. Sign Up" above first'}
             </Text>
