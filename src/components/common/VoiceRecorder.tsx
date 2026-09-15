@@ -37,6 +37,8 @@ try {
 }
 
 // Lazy load expo-file-system safely
+// NOTE: readAsStringAsync is deprecated in Expo v54 but still works — warning is harmless.
+// Do NOT import from 'expo-file-system/legacy' on Windows — Metro crashes due to invalid symlink path.
 let FileSystemModule: any = null;
 try {
   FileSystemModule = require('expo-file-system');

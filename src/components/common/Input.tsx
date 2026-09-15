@@ -53,6 +53,7 @@ export const Input: React.FC<InputProps> = ({
           placeholderTextColor={colors.borderLight}
           onFocus={() => setIsFocused(true)}
           onBlur={() => setIsFocused(false)}
+          accessibilityLabel={textInputProps.accessibilityLabel || label || (typeof textInputProps.placeholder === 'string' ? textInputProps.placeholder : undefined)}
           {...textInputProps}
         />
         {showVoiceButton && (
@@ -60,6 +61,8 @@ export const Input: React.FC<InputProps> = ({
             onPress={onVoicePress}
             style={styles.voiceButton}
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityLabel="Voice input"
+            accessibilityRole="button"
           >
             <Text style={styles.voiceEmoji}>🎤</Text>
           </TouchableOpacity>

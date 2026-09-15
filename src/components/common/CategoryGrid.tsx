@@ -5,7 +5,7 @@
  * 3-column grid with generous spacing.
  */
 import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { categories, CategoryId, CategoryConfig } from '../../utils/categories';
 import { useAppStore } from '../../store/appStore';
 import { colors } from '../../theme/colors';
@@ -17,17 +17,17 @@ interface CategoryGridProps {
   selectedId?: CategoryId | null;
 }
 
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const GRID_PADDING = spacing.xl;
 const COLUMN_GAP = spacing.md;
 const COLUMNS = 3;
-const ITEM_WIDTH = (SCREEN_WIDTH - GRID_PADDING * 2 - COLUMN_GAP * (COLUMNS - 1)) / COLUMNS;
 
 export const CategoryGrid: React.FC<CategoryGridProps> = ({
   onSelect,
   selectedId,
 }) => {
   const language = useAppStore((s) => s.language);
+  const { width: screenWidth } = useWindowDimensions();
+  const itemWidth = (screenWidth - GRID_PADDING * 2 - COLUMN_GAP * (COLUMNS - 1)) / COLUMNS;
 
   return (
     <View style={styles.grid}>
@@ -41,8 +41,12 @@ export const CategoryGrid: React.FC<CategoryGridProps> = ({
             key={cat.id}
             onPress={() => onSelect(cat)}
             activeOpacity={0.7}
+            accessibilityRole="button"
+            accessibilityLabel={label}
+            accessibilityState={{ selected: isSelected }}
             style={[
               styles.item,
+              { width: itemWidth },
               isSelected && styles.itemSelected,
               isEmergency && styles.itemEmergency,
               isSelected && isEmergency && styles.itemEmergencySelected,
@@ -87,7 +91,6 @@ const styles = StyleSheet.create({
     paddingVertical: spacing.base,
   },
   item: {
-    width: ITEM_WIDTH,
     alignItems: 'center',
     paddingVertical: spacing.md,
     borderRadius: borderRadius.lg,

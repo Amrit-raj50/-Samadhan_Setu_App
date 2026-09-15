@@ -10,18 +10,19 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { ErrorBoundary } from '../src/components/common/ErrorBoundary';
 import { OfflineBanner } from '../src/components/common/OfflineBanner';
 import { colors } from '../src/theme/colors';
+import { useAuthStore } from '../src/store/authStore';
 import '../src/utils/i18n'; // Initialize i18n
 import '../global.css'; // NativeWind CSS
 
 export default function RootLayout() {
   const [isReady, setIsReady] = useState(false);
+  const initAuth = useAuthStore((s) => s.initAuth);
 
   useEffect(() => {
-    // Simulate font loading / init
     const prepare = async () => {
       try {
-        // Fonts and other async init will go here
-        await new Promise((resolve) => setTimeout(resolve, 500));
+        // Restore JWT token from AsyncStorage before any screen loads
+        await initAuth();
       } finally {
         setIsReady(true);
       }

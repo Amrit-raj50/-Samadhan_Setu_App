@@ -1,22 +1,30 @@
 import api from './api';
 
-const BHASHINI_SUPPORTED_LANGS = ['hi', 'en', 'bn', 'or', 'ur', 'bho', 'mag', 'mai'];
-
-// sat, ho, mun ke liye koi native/Bhashini voice nahi — Hindi TTS pe route karo
-const NO_NATIVE_VOICE_LANGS = ['sat', 'ho', 'mun'];
+// Native Bhashini TTS models available: hi, en, bn, or
+// For regional tribal & local dialects (sat, ho, mun, bho, mag, mai, ur),
+// route to Hindi TTS so citizens can hear instructions in spoken Hindi
+const BHASHINI_NATIVE_LANGS = ['hi', 'en', 'bn', 'or'];
 
 export function resolveVoiceLanguage(appLanguage: string): string {
-  return NO_NATIVE_VOICE_LANGS.includes(appLanguage) ? 'hi' : appLanguage;
+  if (!appLanguage) return 'hi';
+  const clean = appLanguage.toLowerCase();
+  if (BHASHINI_NATIVE_LANGS.includes(clean)) {
+    return clean;
+  }
+  // Default to Hindi voice for all regional languages/dialects
+  return 'hi';
 }
 
 export function isBhashiniSupported(lang: string): boolean {
-  return BHASHINI_SUPPORTED_LANGS.includes(lang);
+  // All app languages are supported (either natively or via Hindi voice fallback)
+  return true;
 }
 
 export async function synthesizeSpeech(text: string, language: string): Promise<string> {
   try {
+    const effectiveLang = resolveVoiceLanguage(language);
     // POST /api/voice/tts -> { audio: base64String }
-    const res = await api.post('/voice/tts', { text, language });
+    const res = await api.post('/voice/tts', { text, language: effectiveLang });
     return res.data.audio;
   } catch (err: any) {
     if (err.response?.status === 404) {

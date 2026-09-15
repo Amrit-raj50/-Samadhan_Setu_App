@@ -22,6 +22,18 @@ const mapBackendUser = (bUser: any, phoneFallback?: string): User => {
   };
 };
 
+/**
+ * Generates a secure random password when none is provided
+ */
+const generateSecurePassword = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+-=';
+  let password = '';
+  for (let i = 0; i < 16; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+};
+
 export const authService = {
   /**
    * Register User (POST /api/auth/register)
@@ -42,10 +54,14 @@ export const authService = {
         ? data.email
         : `${cleanPhone}@samadhansetu.in`;
 
+      const userPassword = data.password && data.password.trim().length >= 6
+        ? data.password.trim()
+        : generateSecurePassword();
+
       const payload = {
         full_name: data.full_name,
         email: userEmail,
-        password: data.password || 'SecurePassword123!',
+        password: userPassword,
         role: 'citizen',
         phone: cleanPhone,
         district: data.district || 'Ranchi',
@@ -82,6 +98,9 @@ export const authService = {
         ? cleanIdentifier
         : `${cleanIdentifier.replace(/[^0-9]/g, '')}@samadhansetu.in`;
 
+      // Debug: log what we're sending so we can diagnose mismatches
+      console.log('[Auth] loginWithPassword → sending email:', emailPayload);
+
       const res = await api.post('/auth/login', {
         email: emailPayload,
         password: password,
@@ -96,7 +115,11 @@ export const authService = {
     } catch (err: any) {
       const errMsg = err.response?.data?.message || err.message || 'गलत ईमेल/पासवर्ड या खाता मौजूद नहीं है';
       console.error('[Auth Service] login error:', errMsg);
-      throw new Error(errMsg);
+      // If account not found on this backend, suggest registering
+      const finalMsg = (errMsg.toLowerCase().includes('invalid') || errMsg.toLowerCase().includes('not found'))
+        ? `${errMsg}\n\nNote: यदि आप पहली बार local backend use कर रहे हैं तो पहले Register करें।`
+        : errMsg;
+      throw new Error(finalMsg);
     }
   },
 
@@ -104,12 +127,12 @@ export const authService = {
    * Phone OTP sending
    */
   sendOTP: async (phone: string): Promise<{ success: boolean; message: string }> => {
-    console.log(`[Auth] OTP requested for ${phone}`);
+    console.warn(`[Auth][DEV_MOCK] sendOTP is running in development mock mode for phone: ${phone}. No real SMS sent.`);
     return { success: true, message: 'OTP भेज दिया गया' };
   },
 
   /**
-   * Verify OTP and Login
+   * Verify OTP and Login / Register
    */
   verifyOTP: async (
     phone: string,
@@ -124,13 +147,25 @@ export const authService = {
       village_or_city?: string;
     }
   ): Promise<{ success: boolean; user: User; token: string }> => {
-    if (otp !== '123456' && otp.length !== 6) {
+    if (otp !== '123456') {
       throw new Error('गलत OTP — फिर से कोशिश करो');
     }
     if (registrationData) {
       return authService.register(registrationData);
     }
-    return authService.loginWithPassword(phone, 'SecurePassword123!');
+    // General login must use explicit user credentials via loginWithPassword,
+    // or call backend OTP login if supported without bypassing password checks.
+    try {
+      const res = await api.post('/auth/verify-otp', { phone, otp });
+      if (res.data?.success && res.data?.token) {
+        setAuthToken(res.data.token);
+        const user = mapBackendUser(res.data.user, phone);
+        return { success: true, user, token: res.data.token };
+      }
+    } catch {
+      // Backend does not support passwordless OTP login endpoint
+    }
+    throw new Error('ओटीपी सत्यापन केवल पंजीकरण के लिए उपलब्ध है। कृपया पासवर्ड के साथ लॉगिन करें।');
   },
 
   /**

@@ -3,7 +3,7 @@
  * chuna background with terracotta border accent.
  * Slots for photo thumbnail and status badge.
  */
-import React from 'react';
+import React, { useMemo } from 'react';
 import { View, StyleSheet, ViewStyle, TouchableOpacity } from 'react-native';
 import { colors } from '../../theme/colors';
 import { borderRadius, spacing } from '../../theme/spacing';
@@ -15,6 +15,7 @@ interface CardProps {
   style?: ViewStyle;
   elevated?: boolean;
   borderAccent?: boolean;
+  accessibilityLabel?: string;
 }
 
 export const Card: React.FC<CardProps> = ({
@@ -23,13 +24,17 @@ export const Card: React.FC<CardProps> = ({
   style,
   elevated = true,
   borderAccent = false,
+  accessibilityLabel,
 }) => {
-  const cardStyle = [
-    styles.card,
-    elevated && styles.elevated,
-    borderAccent && styles.borderAccent,
-    style,
-  ];
+  const cardStyle = useMemo(
+    () => [
+      styles.card,
+      elevated && styles.elevated,
+      borderAccent && styles.borderAccent,
+      style,
+    ],
+    [elevated, borderAccent, style]
+  );
 
   const content = (
     <>
@@ -43,7 +48,14 @@ export const Card: React.FC<CardProps> = ({
 
   if (onPress) {
     return (
-      <TouchableOpacity onPress={onPress} activeOpacity={0.7} style={cardStyle}>
+      <TouchableOpacity
+        onPress={onPress}
+        activeOpacity={0.7}
+        style={cardStyle}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: false, ...({ pressed: false } as any) }}
+        accessibilityLabel={accessibilityLabel || 'Card'}
+      >
         {content}
       </TouchableOpacity>
     );

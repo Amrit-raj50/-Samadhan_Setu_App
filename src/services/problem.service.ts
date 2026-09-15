@@ -85,9 +85,14 @@ export const problemService = {
     isEmergency: boolean;
   }): Promise<Problem> => {
     try {
+      const rawTitle = data.title || `${data.category} समस्या — रिपोर्ट`;
+      const rawDesc = data.description || '';
+
       const payload = {
-        title: data.title || `${data.category} समस्या`,
-        description: data.description || 'नागरिक द्वारा दर्ज की गई समस्या',
+        title: rawTitle.length >= 5 ? rawTitle : rawTitle + ' (नागरिक रिपोर्ट)',
+        description: rawDesc.length >= 20
+          ? rawDesc
+          : rawDesc + ' नागरिक द्वारा दर्ज की गई समस्या। कृपया ध्यान दें।',
         category: data.category,
         location: {
           lat: data.location.latitude,

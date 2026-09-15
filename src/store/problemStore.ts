@@ -110,6 +110,11 @@ export const useProblemStore = create<ProblemState>((set) => ({
             ? { ...p, status: newStatus, isConfirmedResolved: confirmed }
             : p
         ),
+        publicProblems: state.publicProblems.map((p) =>
+          p.id === id
+            ? { ...p, status: newStatus, isConfirmedResolved: confirmed }
+            : p
+        ),
         currentProblem:
           state.currentProblem?.id === id
             ? { ...state.currentProblem, status: newStatus, isConfirmedResolved: confirmed }
@@ -120,6 +125,9 @@ export const useProblemStore = create<ProblemState>((set) => ({
   rateProblem: (id, rating) =>
     set((state) => ({
       myProblems: state.myProblems.map((p) =>
+        p.id === id ? { ...p, rating } : p
+      ),
+      publicProblems: state.publicProblems.map((p) =>
         p.id === id ? { ...p, rating } : p
       ),
       currentProblem:

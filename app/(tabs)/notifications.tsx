@@ -3,7 +3,7 @@
  * Icon + one-line Hindi text per notification.
  * Per-item 🔊 voice playback, read/unread state.
  */
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useRouter } from 'expo-router';
@@ -16,8 +16,7 @@ import { useNotificationStore, Notification } from '../../src/store/notification
 import { notificationService } from '../../src/services/notification.service';
 import { useAppStore } from '../../src/store/appStore';
 import * as Speech from 'expo-speech';
-import { Bell, Volume2 } from 'lucide-react-native';
-import { Dimensions } from 'react-native';
+import { Bell, Volume2, AlertCircle } from 'lucide-react-native';
 
 const typeEmojis: Record<string, string> = {
   problem_verified: '✅',
@@ -32,6 +31,7 @@ export default function NotificationsScreen() {
   const { t } = useTranslation();
   const language = useAppStore((s) => s.language);
   const { notifications, setNotifications, markAsRead, markAllAsRead } = useNotificationStore();
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   useEffect(() => {
     loadNotifications();
@@ -39,9 +39,13 @@ export default function NotificationsScreen() {
 
   const loadNotifications = async () => {
     try {
+      setErrorMessage(null);
       const data = await notificationService.getNotifications();
       setNotifications(data);
-    } catch {}
+    } catch (err: any) {
+      console.error('[Notifications] Failed to load notifications:', err);
+      setErrorMessage(err?.message || 'सूचनाएं लोड करने में असमर्थ। कृपया पुनः प्रयास करें।');
+    }
   };
 
   const handleSpeak = (message: string) => {
@@ -62,7 +66,6 @@ export default function NotificationsScreen() {
     <SafeAreaView style={styles.safeArea}>
       <VoiceGuideButton text={t('notifications.voiceGuide')} />
 
-
       <ScrollView contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         <View style={styles.headerRow}>
           <View style={styles.titleContainer}>
@@ -70,11 +73,30 @@ export default function NotificationsScreen() {
             <Text style={styles.title}>{t('notifications.title')}</Text>
           </View>
           {notifications.length > 0 && (
-            <TouchableOpacity onPress={markAllAsRead}>
+            <TouchableOpacity
+              onPress={markAllAsRead}
+              accessibilityRole="button"
+              accessibilityLabel={t('notifications.markAllRead')}
+            >
               <Text style={styles.markAllText}>{t('notifications.markAllRead')}</Text>
             </TouchableOpacity>
           )}
         </View>
+
+        {errorMessage && (
+          <View style={styles.errorContainer}>
+            <AlertCircle size={20} color={colors.sindoor} />
+            <Text style={styles.errorText}>{errorMessage}</Text>
+            <TouchableOpacity
+              onPress={loadNotifications}
+              style={styles.retryButton}
+              accessibilityRole="button"
+              accessibilityLabel="पुनः प्रयास करें"
+            >
+              <Text style={styles.retryText}>पुनः प्रयास करें</Text>
+            </TouchableOpacity>
+          </View>
+        )}
 
         {notifications.length === 0 ? (
           <SohraiBellEmpty
@@ -102,6 +124,8 @@ export default function NotificationsScreen() {
                 <TouchableOpacity
                   onPress={() => handleSpeak(notif.message)}
                   style={styles.speakButton}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('notifications.speak', { defaultValue: 'सूचना सुनाएं' })}
                 >
                   <Volume2 size={20} color={colors.forestGreen} />
                 </TouchableOpacity>
@@ -136,4 +160,30 @@ const styles = StyleSheet.create({
     backgroundColor: `${colors.forestGreen}10`, borderRadius: touchTargets.minimum / 2,
   },
   emptyIllustration: { marginTop: spacing['2xl'] },
+  errorContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: `${colors.sindoor}15`,
+    padding: spacing.md,
+    borderRadius: borderRadius.md,
+    marginBottom: spacing.md,
+    gap: spacing.sm,
+  },
+  errorText: {
+    flex: 1,
+    fontSize: fontSize.sm,
+    color: colors.sindoor,
+    fontWeight: '500',
+  },
+  retryButton: {
+    backgroundColor: colors.sindoor,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.xs,
+    borderRadius: borderRadius.sm,
+  },
+  retryText: {
+    color: '#FFFFFF',
+    fontSize: fontSize.xs,
+    fontWeight: '600',
+  },
 });

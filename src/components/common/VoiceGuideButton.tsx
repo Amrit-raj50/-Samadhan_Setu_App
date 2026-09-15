@@ -3,7 +3,6 @@ import { TouchableOpacity, ActivityIndicator, StyleSheet } from 'react-native';
 import { Volume2 } from 'lucide-react-native';
 import { resolveVoiceLanguage, isBhashiniSupported, synthesizeSpeech } from '../../services/voice.service';
 import { useAppStore } from '../../store/appStore';
-import { useAuthStore } from '../../store/authStore';
 import { colors } from '../../theme/colors';
 
 // Lazy load native modules to prevent crash in Expo Go / Web when native modules are unavailable
@@ -30,7 +29,6 @@ interface VoiceGuideButtonProps {
 export function VoiceGuideButton({ text }: VoiceGuideButtonProps) {
   const language = useAppStore((s) => s.language);
   const isVoiceGuideEnabled = useAppStore((s) => s.isVoiceGuideEnabled);
-  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
   const [loading, setLoading] = useState(false);
 
   if (!isVoiceGuideEnabled) return null;
@@ -44,13 +42,6 @@ export function VoiceGuideButton({ text }: VoiceGuideButtonProps) {
   const handlePress = async () => {
     setLoading(true);
     const effectiveLang = resolveVoiceLanguage(language);
-
-    // Skip Bhashini API call when user is not authenticated — avoids 401 noise
-    if (!isAuthenticated || !isBhashiniSupported(effectiveLang)) {
-      speakWithDevice(effectiveLang);
-      setLoading(false);
-      return;
-    }
 
     try {
       const audioBase64 = await synthesizeSpeech(text, effectiveLang);

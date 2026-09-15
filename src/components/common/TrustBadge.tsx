@@ -21,8 +21,13 @@ export const TrustBadge: React.FC<TrustBadgeProps> = ({
   if (actualCount <= 1) return null;
 
   return (
-    <View style={styles.container}>
-      <View style={styles.iconContainer}>
+    <View
+      style={styles.container}
+      accessible={true}
+      accessibilityRole="text"
+      accessibilityLabel={`${actualCount} ${label}`}
+    >
+      <View style={styles.iconContainer} importantForAccessibility="no">
         <Users size={14} color={colors.surface} />
       </View>
       <Text style={styles.text}>
