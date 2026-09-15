@@ -87,25 +87,66 @@ export const problemService = {
   }): Promise<Problem> => {
     try {
       const rawTitle = data.title || `${data.category} समस्या — रिपोर्ट`;
+      const finalTitle = rawTitle.length >= 5 ? rawTitle : rawTitle + ' (नागरिक रिपोर्ट)';
       const rawDesc = data.description || '';
+      const finalDesc = rawDesc.length >= 20
+        ? rawDesc
+        : rawDesc + ' नागरिक द्वारा दर्ज की गई समस्या। कृपया ध्यान दें।';
 
-      const payload = {
-        title: rawTitle.length >= 5 ? rawTitle : rawTitle + ' (नागरिक रिपोर्ट)',
-        description: rawDesc.length >= 20
-          ? rawDesc
-          : rawDesc + ' नागरिक द्वारा दर्ज की गई समस्या। कृपया ध्यान दें।',
-        category: data.category,
-        location: {
-          lat: data.location.latitude,
-          lng: data.location.longitude,
-          district: data.location.district || 'Ranchi',
-          address: data.location.address || '',
-        },
-        image_urls: data.images,
-        is_emergency: data.isEmergency,
+      const locationObj = {
+        lat: data.location.latitude,
+        lng: data.location.longitude,
+        district: data.location.district || 'Ranchi',
+        address: data.location.address || '',
       };
 
-      const res = await api.post('/problems', payload);
+      const localImages = (data.images || []).filter(
+        (img) => typeof img === 'string' && (img.startsWith('file:') || img.startsWith('content:') || img.startsWith('ph:'))
+      );
+      const remoteImages = (data.images || []).filter(
+        (img) => typeof img === 'string' && (img.startsWith('http://') || img.startsWith('https://'))
+      );
+
+      let res;
+      if (localImages.length > 0) {
+        const formData = new FormData();
+        formData.append('title', finalTitle);
+        formData.append('description', finalDesc);
+        formData.append('category', data.category);
+        formData.append('location', JSON.stringify(locationObj));
+        formData.append('is_emergency', String(data.isEmergency));
+        if (remoteImages.length > 0) {
+          formData.append('image_urls', JSON.stringify(remoteImages));
+        }
+
+        localImages.forEach((imgUri, index) => {
+          const filename = imgUri.split('/').pop() || `photo_${index}.jpg`;
+          const ext = filename.split('.').pop()?.toLowerCase();
+          const mimeType = ext === 'png' ? 'image/png' : ext === 'webp' ? 'image/webp' : 'image/jpeg';
+
+          formData.append('images', {
+            uri: imgUri,
+            name: filename,
+            type: mimeType,
+          } as any);
+        });
+
+        res = await api.post('/problems', formData, {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        });
+      } else {
+        const payload = {
+          title: finalTitle,
+          description: finalDesc,
+          category: data.category,
+          location: locationObj,
+          image_urls: remoteImages,
+          is_emergency: data.isEmergency,
+        };
+        res = await api.post('/problems', payload);
+      }
 
       if (res.data?.success && res.data?.data) {
         return mapBackendProblem(res.data.data);
