@@ -3,6 +3,7 @@
  * Matched 100% with backend controllers/problem.controller.js
  */
 import api from './api';
+import { ApiError, toApiError } from './apiError';
 import { Problem } from '../store/problemStore';
 import { CategoryId } from '../utils/categories';
 import { ProblemStatus } from '../utils/statusConfig';
@@ -109,11 +110,11 @@ export const problemService = {
       if (res.data?.success && res.data?.data) {
         return mapBackendProblem(res.data.data);
       }
-      throw new Error(res.data?.message || 'Problem submission failed');
+      throw new ApiError(res.data?.message || 'Problem submission failed', 'server', res.status);
     } catch (err: any) {
-      const errMsg = err.response?.data?.message || err.message || 'समस्या दर्ज नहीं हो सकी';
-      console.error('[Problem Service] submitProblem error:', errMsg);
-      throw new Error(errMsg);
+      const apiError = toApiError(err, 'समस्या दर्ज नहीं हो सकी');
+      console.error(`[Problem Service] submitProblem error (${apiError.kind}):`, apiError.message);
+      throw apiError;
     }
   },
 

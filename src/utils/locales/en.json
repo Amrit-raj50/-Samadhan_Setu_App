@@ -108,6 +108,11 @@
     "emergencyTitle": "Immediate Danger",
     "emergencyConfirm": "Is this an immediate danger?",
     "offlineSaved": "Saved safely — will send when network returns",
+    "loginRequiredTitle": "Login required",
+    "loginRequiredMessage": "Please log in to submit a complaint. Your details are kept on this screen.",
+    "loginAction": "Log in",
+    "submitFailedTitle": "Could not submit",
+    "submitFailedRetry": "Please check the details and try again.",
     "editWindow": "You can edit or cancel for {{minutes}} minutes",
     "submitted": "Complaint submitted!",
     "voiceGuide": "To report a problem, first take a photo. Then your location will be detected automatically. After that, select the type of problem."

@@ -40,6 +40,7 @@ import { useProblemStore } from '../../src/store/problemStore';
 import { useAuthStore } from '../../src/store/authStore';
 import { problemService } from '../../src/services/problem.service';
 import { offlineQueueService } from '../../src/services/offlineQueue.service';
+import { ApiError, ApiErrorKind } from '../../src/services/apiError';
 import { CategoryConfig, getCategoryById } from '../../src/utils/categories';
 import { getDistrictName, districts } from '../../src/utils/districts';
 import { Camera, Image as ImageIcon, Mic, RefreshCcw, Check, X, Search, ArrowLeft, Users, Home } from 'lucide-react-native';
@@ -68,6 +69,7 @@ export default function SubmitScreen() {
   const [voiceRecorded, setVoiceRecorded] = useState(false);
   const [loading, setLoading] = useState(false);
   const [duplicates, setDuplicates] = useState<any[]>([]);
+  const [queuedOffline, setQueuedOffline] = useState(false);
 
   const resetForm = () => {
     setStep('photo');
@@ -77,6 +79,7 @@ export default function SubmitScreen() {
     setVoiceUri(null);
     setVoiceRecorded(false);
     setDuplicates([]);
+    setQueuedOffline(false);
     setLoading(false);
     detectLocation();
   };
@@ -235,6 +238,17 @@ export default function SubmitScreen() {
     setStep('confirm');
   };
 
+  const promptLogin = () => {
+    Alert.alert(
+      t('submit.loginRequiredTitle'),
+      t('submit.loginRequiredMessage'),
+      [
+        { text: t('common.cancel'), style: 'cancel' },
+        { text: t('submit.loginAction'), onPress: () => router.push('/login') },
+      ]
+    );
+  };
+
   const handleVoiceRecord = () => {
     // Simulated — in production, use expo-av Audio.Recording
     setVoiceRecorded(true);
@@ -244,6 +258,28 @@ export default function SubmitScreen() {
   };
 
   const handleConfirmSubmit = async () => {
+    const submissionData = {
+      images: imageUri ? [imageUri] : [],
+      voiceNote: voiceUri || undefined,
+      title: selectedCategory
+        ? (language === 'hi' ? selectedCategory.labelHi : selectedCategory.labelEn)
+        : '',
+      description,
+      category: selectedCategory!.id,
+      location: {
+        latitude: locationCoords?.latitude || 23.3441,
+        longitude: locationCoords?.longitude || 85.3096,
+        district: locationDistrict,
+        address: locationAddress,
+      },
+      isEmergency: selectedCategory?.isEmergency || false,
+    };
+
+    if (!isOffline && !isAuthenticated) {
+      promptLogin();
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -261,38 +297,35 @@ export default function SubmitScreen() {
         return;
       }
 
-      const submissionData = {
-        images: imageUri ? [imageUri] : [],
-        voiceNote: voiceUri || undefined,
-        title: selectedCategory
-          ? (language === 'hi' ? selectedCategory.labelHi : selectedCategory.labelEn)
-          : '',
-        description,
-        category: selectedCategory!.id,
-        location: {
-          latitude: locationCoords?.latitude || 23.3441,
-          longitude: locationCoords?.longitude || 85.3096,
-          district: locationDistrict,
-          address: locationAddress,
-        },
-        isEmergency: selectedCategory?.isEmergency || false,
-      };
-
       if (isOffline) {
         // Offline: save to queue
         await offlineQueueService.enqueue({ data: submissionData });
+        setQueuedOffline(true);
         setStep('done');
       } else {
         // Online: submit directly
         const problem = await problemService.submitProblem(submissionData);
         addMyProblem(problem);
+        setQueuedOffline(false);
         setStep('done');
       }
     } catch (e: any) {
-      if (e.message?.includes('limit') || e.message?.includes('Limit')) {
+      const kind: ApiErrorKind | undefined = e instanceof ApiError ? e.kind : undefined;
+
+      if (kind === 'network') {
+        // Backend unreachable — really queue the report instead of pretending to
+        await offlineQueueService.enqueue({ data: submissionData });
+        setQueuedOffline(true);
+        setStep('done');
+      } else if (kind === 'auth') {
+        promptLogin();
+      } else if (e.message?.includes('limit') || e.message?.includes('Limit')) {
         Alert.alert('सीमा त्रुटि', e.message);
       } else {
-        Alert.alert('', t('submit.offlineSaved'));
+        Alert.alert(
+          t('submit.submitFailedTitle'),
+          e.message || t('submit.submitFailedRetry')
+        );
       }
     } finally {
       setLoading(false);
@@ -508,7 +541,7 @@ export default function SubmitScreen() {
     <View style={styles.stepContainer}>
       <Text style={styles.doneEmoji}>🎉</Text>
       <Text style={styles.doneTitle}>
-        {isOffline ? t('submit.offlineSaved') : t('submit.submitted')}
+        {queuedOffline ? t('submit.offlineSaved') : t('submit.submitted')}
       </Text>
       <Text style={styles.doneSubtitle}>
         {t('submit.editWindow', { minutes: 10 })}
