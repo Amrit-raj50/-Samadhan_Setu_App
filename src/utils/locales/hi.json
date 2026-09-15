@@ -191,8 +191,10 @@
   "languages": {
     "hindi": "हिंदी",
     "english": "English",
-    "santhali": "ᱥᱟᱱᱛᱟᱲᱤ (जल्द आ रहा है)",
-    "ho": "हो (जल्द आ रहा है)",
-    "mundari": "मुंडारी (जल्द आ रहा है)"
+    "santhali": "ᱥᱟᱱᱛᱟᱲᱤ (Santhali)",
+    "angika": "अंगिका (Angika)",
+    "bhojpuri": "भोजपुरी (Bhojpuri)",
+    "odia": "ଓଡ଼ିଆ (Odia)",
+    "bengali": "বাংলা (Bengali)"
   }
 }

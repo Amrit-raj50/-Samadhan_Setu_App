@@ -4,7 +4,7 @@
  */
 import { create } from 'zustand';
 
-export type Language = 'hi' | 'en' | 'sat' | 'ho' | 'mun';
+export type Language = 'hi' | 'en' | 'sat' | 'kht' | 'nag' | 'bho' | 'anp' | 'mag' | 'mai' | 'or' | 'bn' | 'kru' | 'ho' | 'mun';
 
 interface AppState {
   language: Language;

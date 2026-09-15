@@ -189,10 +189,12 @@
     "voiceGuide": "This is your profile. You can change your name, number, and language from here."
   },
   "languages": {
-    "hindi": "हिंदी",
+    "hindi": "Hindi (हिंदी)",
     "english": "English",
-    "santhali": "ᱥᱟᱱᱛᱟᱲᱤ (Coming Soon)",
-    "ho": "Ho (Coming Soon)",
-    "mundari": "Mundari (Coming Soon)"
+    "santhali": "Santhali (ᱥᱟᱱᱛᱟᱲᱤ)",
+    "angika": "Angika (अंगिका)",
+    "bhojpuri": "Bhojpuri (भोजपुरी)",
+    "odia": "Odia (ଓଡ଼ିଆ)",
+    "bengali": "Bengali (বাংলা)"
   }
 }

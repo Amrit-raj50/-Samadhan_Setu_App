@@ -10,7 +10,7 @@ import { useRouter } from 'expo-router';
 import Svg, { Path, Circle } from 'react-native-svg';
 import { ArrowLeft, ChevronDown } from 'lucide-react-native';
 import { useTranslation } from 'react-i18next';
-import { useAppStore } from '../../store/appStore';
+import { useAppStore, Language } from '../../store/appStore';
 import i18n from '../../utils/i18n';
 import { colors } from '../../theme/colors';
 import { spacing } from '../../theme/spacing';
@@ -90,12 +90,30 @@ export function GoogleLogo({ size = 20 }: { size?: number }) {
   );
 }
 
+const LANGUAGES: Language[] = ['hi', 'en', 'sat', 'kht', 'nag', 'bho', 'anp', 'mag', 'mai', 'kru', 'or', 'bn'];
+const LANG_DISPLAY: Record<string, string> = {
+  hi: 'HI',
+  en: 'EN',
+  sat: 'ᱥᱟᱱ',
+  kht: 'खोर',
+  nag: 'नाग',
+  bho: 'भोज',
+  anp: 'अंग',
+  mag: 'मग',
+  mai: 'मैथ',
+  kru: 'कुड़',
+  or: 'ଓଡ଼ି',
+  bn: 'বাং',
+};
+
 export function SamadhanHeader({ showBack = false, onBack, style }: SamadhanHeaderProps) {
   const router = useRouter();
   const { language, setLanguage } = useAppStore();
 
   const handleLanguageToggle = () => {
-    const nextLang = language === 'hi' ? 'en' : 'hi';
+    const currentIndex = LANGUAGES.indexOf(language as Language);
+    const nextIndex = currentIndex === -1 ? 0 : (currentIndex + 1) % LANGUAGES.length;
+    const nextLang = LANGUAGES[nextIndex];
     setLanguage(nextLang);
     i18n.changeLanguage(nextLang);
   };
@@ -140,7 +158,7 @@ export function SamadhanHeader({ showBack = false, onBack, style }: SamadhanHead
         activeOpacity={0.7}
       >
         <Text style={styles.langText}>
-          {language === 'hi' ? 'HI' : 'EN'}
+          {LANG_DISPLAY[language] || language.toUpperCase()}
         </Text>
         <ChevronDown size={14} color="#FFFFFF" style={{ marginLeft: 3 }} />
       </TouchableOpacity>

@@ -13,7 +13,7 @@ import { colors } from '../../src/theme/colors';
 import { fontSize } from '../../src/theme/typography';
 import { spacing, screenPadding, borderRadius } from '../../src/theme/spacing';
 import { useAuthStore } from '../../src/store/authStore';
-import { useAppStore } from '../../src/store/appStore';
+import { useAppStore, Language } from '../../src/store/appStore';
 import { getDistrictName } from '../../src/utils/districts';
 import {
   User,
@@ -40,7 +40,7 @@ export default function ProfileScreen() {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState(user?.full_name || '');
 
-  const handleLanguageChange = (lang: 'hi' | 'en' | 'sat' | 'ho' | 'mun') => {
+  const handleLanguageChange = (lang: Language) => {
     setLanguage(lang);
     i18n.changeLanguage(lang);
   };
@@ -213,19 +213,31 @@ export default function ProfileScreen() {
           </View>
           <View style={styles.langGrid}>
             {[
-              { id: 'hi', label: t('languages.hindi') },
-              { id: 'en', label: t('languages.english') },
-              { id: 'sat', label: t('languages.santhali') },
-              { id: 'ho', label: t('languages.ho') },
-              { id: 'mun', label: t('languages.mundari') },
+              { id: 'hi', label: 'हिंदी', sub: 'Hindi' },
+              { id: 'en', label: 'English', sub: 'English' },
+              { id: 'sat', label: 'ᱥᱟᱱᱛᱟᱲᱤ', sub: 'Santhali' },
+              { id: 'kht', label: 'खोरठा', sub: 'Khortha' },
+              { id: 'nag', label: 'नागपुरी', sub: 'Nagpuri' },
+              { id: 'bho', label: 'भोजपुरी', sub: 'Bhojpuri' },
+              { id: 'anp', label: 'अंगिका', sub: 'Angika' },
+              { id: 'mag', label: 'मगही', sub: 'Magahi' },
+              { id: 'mai', label: 'मैथिली', sub: 'Maithili' },
+              { id: 'kru', label: 'कुड़ुख़', sub: 'Kurukh' },
+              { id: 'or', label: 'ଓଡ଼ିଆ', sub: 'Odia' },
+              { id: 'bn', label: 'বাংলা', sub: 'Bengali' },
             ].map((item) => (
               <TouchableOpacity
                 key={item.id}
-                onPress={() => handleLanguageChange(item.id as any)}
+                onPress={() => handleLanguageChange(item.id as Language)}
                 style={[styles.langButton, language === item.id && styles.langButtonActive]}
+                accessibilityRole="button"
+                accessibilityLabel={`${item.label} (${item.sub})`}
               >
                 <Text style={[styles.langText, language === item.id && styles.langTextActive]}>
                   {item.label}
+                </Text>
+                <Text style={[styles.langSubText, language === item.id && styles.langSubTextActive]}>
+                  {item.sub}
                 </Text>
               </TouchableOpacity>
             ))}
@@ -426,8 +438,10 @@ const styles = StyleSheet.create({
     alignItems: 'center', minWidth: '47%', flexGrow: 1, marginBottom: spacing.xs,
   },
   langButtonActive: { borderColor: colors.forestGreen, backgroundColor: `${colors.forestGreen}10` },
-  langText: { fontSize: fontSize.base, color: colors.mudBrown, fontWeight: '600' },
-  langTextActive: { color: colors.forestGreen, fontWeight: '700' },
+  langText: { fontSize: fontSize.base, color: colors.mudBrown, fontWeight: '700' },
+  langTextActive: { color: colors.forestGreen },
+  langSubText: { fontSize: fontSize.xs, color: colors.mudBrown, opacity: 0.7, marginTop: 2 },
+  langSubTextActive: { color: colors.forestGreen, opacity: 0.9, fontWeight: '600' },
   toggleRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   toggleLabel: { fontSize: fontSize.base, color: colors.mudBrown, fontWeight: '600' },
   toggleValue: { fontSize: fontSize.base, fontWeight: '600' },
