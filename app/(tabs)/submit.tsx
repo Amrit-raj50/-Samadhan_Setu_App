@@ -9,7 +9,7 @@
  * Pre-submit: TTS read-back confirmation with large Yes/No
  * Duplicate detection, emergency shortcut, offline-first.
  */
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -41,6 +41,7 @@ import { useAuthStore } from '../../src/store/authStore';
 import { problemService } from '../../src/services/problem.service';
 import { offlineQueueService } from '../../src/services/offlineQueue.service';
 import { ApiError, ApiErrorKind } from '../../src/services/apiError';
+import { showAlert, showConfirm } from '../../src/utils/alert';
 import { CategoryConfig, getCategoryById } from '../../src/utils/categories';
 import { getDistrictName, districts } from '../../src/utils/districts';
 import { Camera, Image as ImageIcon, Mic, RefreshCcw, Check, X, Search, ArrowLeft, Users, Home } from 'lucide-react-native';
@@ -84,13 +85,18 @@ export default function SubmitScreen() {
     detectLocation();
   };
 
-  // Reset form whenever screen comes into focus if previous submission was completed
+  const stepRef = useRef(step);
+  stepRef.current = step;
+
+  // Reset form when the screen is re-entered after a completed submission.
+  // The callback must not depend on `step`, otherwise it re-fires as soon as
+  // the submission sets step to 'done' and wipes the success screen.
   useFocusEffect(
     React.useCallback(() => {
-      if (step === 'done') {
+      if (stepRef.current === 'done') {
         resetForm();
       }
-    }, [step])
+    }, [])
   );
 
   // Auto-detect GPS when reaching location step
@@ -239,13 +245,12 @@ export default function SubmitScreen() {
   };
 
   const promptLogin = () => {
-    Alert.alert(
+    showConfirm(
       t('submit.loginRequiredTitle'),
       t('submit.loginRequiredMessage'),
-      [
-        { text: t('common.cancel'), style: 'cancel' },
-        { text: t('submit.loginAction'), onPress: () => router.push('/login') },
-      ]
+      t('submit.loginAction'),
+      t('common.cancel'),
+      () => router.push('/login')
     );
   };
 
@@ -287,7 +292,7 @@ export default function SubmitScreen() {
       const { isLimitReached, countToday } = await problemService.checkDailyLimitReached();
       if (isLimitReached) {
         const isHindi = language === 'hi';
-        Alert.alert(
+        showAlert(
           isHindi ? 'दैनिक सीमा पूरी (3/3)' : 'Daily Limit Reached (3/3)',
           isHindi
             ? `आप आज पहले ही ${countToday} शिकायतें दर्ज कर चुके हैं। एक दिन में अधिकतम 3 शिकायतें ही दर्ज की जा सकती हैं।`
@@ -320,9 +325,9 @@ export default function SubmitScreen() {
       } else if (kind === 'auth') {
         promptLogin();
       } else if (e.message?.includes('limit') || e.message?.includes('Limit')) {
-        Alert.alert('सीमा त्रुटि', e.message);
+        showAlert('सीमा त्रुटि', e.message);
       } else {
-        Alert.alert(
+        showAlert(
           t('submit.submitFailedTitle'),
           e.message || t('submit.submitFailedRetry')
         );
