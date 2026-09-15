@@ -5,12 +5,19 @@ import { resolveVoiceLanguage, isBhashiniSupported, synthesizeSpeech } from '../
 import { useAppStore } from '../../store/appStore';
 import { colors } from '../../theme/colors';
 
-// Lazy load native modules to prevent crash in Expo Go / Web when native modules are unavailable
-let AudioModule: any = null;
+// Dynamic native audio loaders for maximum compatibility across Expo versions
+let ExpoAudioModule: any = null;
 try {
-  AudioModule = require('expo-av').Audio;
+  ExpoAudioModule = require('expo-audio');
 } catch {
-  AudioModule = null;
+  ExpoAudioModule = null;
+}
+
+let ExpoAvModule: any = null;
+try {
+  ExpoAvModule = require('expo-av').Audio;
+} catch {
+  ExpoAvModule = null;
 }
 
 let SpeechModule: any = null;
@@ -20,11 +27,33 @@ try {
   SpeechModule = null;
 }
 
+let FileSystemModule: any = null;
+try {
+  FileSystemModule = require('expo-file-system');
+} catch {
+  FileSystemModule = null;
+}
+
 let currentSound: any = null;
 
 interface VoiceGuideButtonProps {
   text: string;
 }
+
+const DEVICE_LANG_MAP: Record<string, string> = {
+  bn: 'bn-IN',
+  or: 'or-IN',
+  bho: 'hi-IN',
+  sat: 'hi-IN',
+  anp: 'hi-IN',
+  kht: 'hi-IN',
+  nag: 'hi-IN',
+  mag: 'hi-IN',
+  mai: 'hi-IN',
+  kru: 'hi-IN',
+  hi: 'hi-IN',
+  en: 'en-IN',
+};
 
 export function VoiceGuideButton({ text }: VoiceGuideButtonProps) {
   const language = useAppStore((s) => s.language);
@@ -35,11 +64,16 @@ export function VoiceGuideButton({ text }: VoiceGuideButtonProps) {
 
   const speakWithDevice = (lang: string) => {
     if (SpeechModule && SpeechModule.speak) {
-      SpeechModule.speak(text, { language: lang === 'hi' ? 'hi-IN' : 'en-IN' });
+      try {
+        if (typeof SpeechModule.stop === 'function') SpeechModule.stop();
+      } catch {}
+      const deviceLang = DEVICE_LANG_MAP[lang] || 'hi-IN';
+      SpeechModule.speak(text, { language: deviceLang });
     }
   };
 
   const handlePress = async () => {
+    if (!text || typeof text !== 'string' || !text.trim()) return;
     setLoading(true);
     const effectiveLang = resolveVoiceLanguage(language);
 
@@ -47,7 +81,7 @@ export function VoiceGuideButton({ text }: VoiceGuideButtonProps) {
       const audioBase64 = await synthesizeSpeech(text, effectiveLang);
       await playBase64Audio(audioBase64);
     } catch (err) {
-      console.warn('[VoiceGuideButton] Bhashini TTS failed, falling back to device voice:', err);
+      console.warn('[VoiceGuideButton] Bhashini audio playback failed, falling back to device voice:', err);
       speakWithDevice(effectiveLang);
     } finally {
       setLoading(false);
@@ -66,19 +100,52 @@ export function VoiceGuideButton({ text }: VoiceGuideButtonProps) {
 }
 
 async function playBase64Audio(base64: string) {
-  if (!AudioModule) {
-    throw new Error('Expo AV Audio module is not available in current environment');
-  }
-  if (currentSound) {
+  let fileUri = `data:audio/wav;base64,${base64}`;
+
+  // Write base64 audio to cache file if FileSystem is available for smooth native audio decoding
+  if (FileSystemModule && FileSystemModule.cacheDirectory) {
     try {
-      await currentSound.unloadAsync();
-    } catch {}
+      const tempPath = `${FileSystemModule.cacheDirectory}bhashini_${Date.now()}.wav`;
+      await FileSystemModule.writeAsStringAsync(tempPath, base64, {
+        encoding: FileSystemModule.EncodingType?.Base64 || 'base64',
+      });
+      fileUri = tempPath;
+    } catch (fsErr) {
+      // Fallback to data URI if file writing fails
+    }
   }
-  const { sound } = await AudioModule.Sound.createAsync(
-    { uri: `data:audio/wav;base64,${base64}` },
-    { shouldPlay: true }
-  );
-  currentSound = sound;
+
+  // 1. Try modern expo-audio
+  if (ExpoAudioModule && typeof ExpoAudioModule.createAudioPlayer === 'function') {
+    try {
+      if (currentSound && typeof currentSound.pause === 'function') {
+        currentSound.pause();
+      }
+      const player = ExpoAudioModule.createAudioPlayer(fileUri);
+      player.play();
+      currentSound = player;
+      return;
+    } catch (audioErr) {
+      console.warn('[VoiceGuideButton] expo-audio failed, trying expo-av:', audioErr);
+    }
+  }
+
+  // 2. Try legacy expo-av
+  if (ExpoAvModule && typeof ExpoAvModule.Sound?.createAsync === 'function') {
+    if (currentSound && typeof currentSound.unloadAsync === 'function') {
+      try {
+        await currentSound.unloadAsync();
+      } catch {}
+    }
+    const { sound } = await ExpoAvModule.Sound.createAsync(
+      { uri: fileUri },
+      { shouldPlay: true }
+    );
+    currentSound = sound;
+    return;
+  }
+
+  throw new Error('Native audio player (expo-audio/expo-av) not available in current runtime');
 }
 
 const styles = StyleSheet.create({

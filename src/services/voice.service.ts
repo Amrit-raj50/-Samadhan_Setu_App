@@ -1,22 +1,36 @@
 import api from './api';
 
-// Native Bhashini TTS models available: hi, en, bn, or
-// For regional tribal & local dialects (sat, ho, mun, bho, mag, mai, ur),
-// route to Hindi TTS so citizens can hear instructions in spoken Hindi
-const BHASHINI_NATIVE_LANGS = ['hi', 'en', 'bn', 'or'];
+// Native Bhashini TTS models available for Jharkhand regional languages:
+// hi, en, bn, or, bho, sat, anp, kht, nag, mag, mai, kru
+const BHASHINI_NATIVE_LANGS = [
+  'hi', 'en', 'bn', 'or', 'bho', 'sat', 'anp', 'kht', 'nag', 'mag', 'mai', 'kru'
+];
 
 export function resolveVoiceLanguage(appLanguage: string): string {
   if (!appLanguage) return 'hi';
-  const clean = appLanguage.toLowerCase();
+  const clean = appLanguage.toLowerCase().trim();
+
+  // Explicit mappings for common names / codes
+  if (clean === 'bengali' || clean === 'bangla' || clean === 'bn') return 'bn';
+  if (clean === 'odia' || clean === 'oriya' || clean === 'or') return 'or';
+  if (clean === 'bhojpuri' || clean === 'bho') return 'bho';
+  if (clean === 'santhali' || clean === 'santali' || clean === 'sat') return 'sat';
+  if (clean === 'khortha' || clean === 'kht') return 'kht';
+  if (clean === 'nagpuri' || clean === 'sadri' || clean === 'nag' || clean === 'sck') return 'nag';
+  if (clean === 'angika' || clean === 'anp' || clean === 'ang') return 'anp';
+  if (clean === 'magahi' || clean === 'mag') return 'mag';
+  if (clean === 'maithili' || clean === 'mai') return 'mai';
+  if (clean === 'kurukh' || clean === 'oraon' || clean === 'kru') return 'kru';
+  if (clean === 'ho' || clean === 'mun' || clean === 'mundari') return 'sat'; // Closest tribal tongue with Bhashini support
+  if (clean === 'english' || clean === 'en') return 'en';
+
   if (BHASHINI_NATIVE_LANGS.includes(clean)) {
     return clean;
   }
-  // Default to Hindi voice for all regional languages/dialects
   return 'hi';
 }
 
 export function isBhashiniSupported(lang: string): boolean {
-  // All app languages are supported (either natively or via Hindi voice fallback)
   return true;
 }
 
