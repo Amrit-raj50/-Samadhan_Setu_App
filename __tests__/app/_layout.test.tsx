@@ -3,7 +3,7 @@
  * Tests RootLayout component lifecycle, auth initialization, and navigation tree rendering.
  */
 import React from 'react';
-import RootLayout from './_layout';
+import RootLayout from '../../app/_layout';
 
 // Mock expo-router
 jest.mock('expo-router', () => {
@@ -28,17 +28,17 @@ jest.mock('expo-status-bar', () => ({
 }));
 
 // Mock custom components
-jest.mock('../src/components/common/ErrorBoundary', () => ({
+jest.mock('../../src/components/common/ErrorBoundary', () => ({
   ErrorBoundary: ({ children }: any) => <>{children}</>,
 }));
 
-jest.mock('../src/components/common/OfflineBanner', () => ({
+jest.mock('../../src/components/common/OfflineBanner', () => ({
   OfflineBanner: () => null,
 }));
 
 // Mock auth store
 const mockInitAuth = jest.fn().mockResolvedValue(undefined);
-jest.mock('../src/store/authStore', () => ({
+jest.mock('../../src/store/authStore', () => ({
   useAuthStore: (selector: any) => selector({ initAuth: mockInitAuth }),
 }));
 
